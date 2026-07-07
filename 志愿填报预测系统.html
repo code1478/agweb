@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>志愿填报预测系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#0a1628;color:#fff;line-height:1.6;min-height:100vh;}
+/* ===== Top Nav ===== */
+.top-nav{display:flex;background:rgba(59,130,246,0.15);border-bottom:1px solid rgba(59,130,246,0.25);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);}
+.nav-tab{flex:1;padding:16px 20px;text-align:center;font-size:17px;font-weight:700;cursor:pointer;transition:all .3s;border-bottom:3px solid transparent;color:rgba(255,255,255,0.5);letter-spacing:1px;}
+.nav-tab:hover{color:rgba(255,255,255,0.8);background:rgba(59,130,246,0.08);}
+.nav-tab.active{color:#fff;border-bottom-color:#3b82f6;background:rgba(59,130,246,0.12);}
+/* ===== Container ===== */
+.container{max-width:960px;margin:0 auto;padding:20px 16px 40px;}
+.system-panel{display:none;}
+.system-panel.active{display:block;}
+/* ===== Card ===== */
+.card{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.18);border-radius:14px;padding:24px;margin-bottom:20px;}
+.card h2{font-size:18px;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.card h2::before{content:"";width:4px;height:20px;background:#3b82f6;border-radius:2px;}
+/* ===== Input Row ===== */
+.input-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;}
+.form-group{flex:1;min-width:140px;}
+.form-group label{display:block;font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:6px;font-weight:500;}
+.form-group input,.form-group select{width:100%;padding:12px 14px;border:2px solid rgba(59,130,246,0.4);border-radius:10px;font-size:16px;font-weight:600;color:#fff;background:rgba(59,130,246,0.1);transition:all .25s;}
+.form-group input::placeholder{color:rgba(255,255,255,0.3);font-weight:400;}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.3),0 0 20px rgba(59,130,246,0.15);background:rgba(59,130,246,0.18);}
+.form-group select option{background:#0a1628;color:#fff;}
+.form-group .hint{font-size:11px;color:rgba(255,255,255,0.4);margin-top:5px;}
+.btn-primary{padding:12px 36px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;transition:all .25s;letter-spacing:1px;white-space:nowrap;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(59,130,246,0.4);}
+.btn-primary:active{transform:scale(0.97);}
+/* ===== Summary Cards ===== */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.summary-card{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.18);border-radius:12px;padding:18px 12px;text-align:center;}
+.summary-card .num{font-size:28px;font-weight:900;color:#3b82f6;}
+.summary-card .label{font-size:12px;color:rgba(255,255,255,0.55);margin-top:4px;}
+.summary-card.s-green .num{color:#22c55e;}
+.summary-card.s-yellow .num{color:#eab308;}
+.summary-card.s-red .num{color:#ef4444;}
+/* ===== Rank Range ===== */
+.rank-range{margin-bottom:20px;}
+.rank-range-bar{height:32px;border-radius:8px;background:rgba(59,130,246,0.1);position:relative;overflow:hidden;border:1px solid rgba(59,130,246,0.15);}
+.rank-range-segment{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;}
+.rank-marker{position:absolute;top:-4px;bottom:-4px;width:3px;background:#fff;border-radius:2px;z-index:5;box-shadow:0 0 8px rgba(255,255,255,0.6);}
+.rank-marker::after{content:"当前";position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:#fff;white-space:nowrap;font-weight:700;text-shadow:0 0 4px rgba(0,0,0,0.8);}
+.rank-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:rgba(255,255,255,0.4);}
+/* ===== School Probability ===== */
+.school-prob-list{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.school-prob-item{display:flex;align-items:center;gap:12px;}
+.school-prob-name{width:130px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+.school-prob-bar-wrap{flex:1;height:10px;background:rgba(255,255,255,0.06);border-radius:5px;position:relative;overflow:hidden;}
+.school-prob-bar{height:100%;border-radius:5px;transition:width .6s ease;min-width:2px;}
+.school-prob-bar.stable{background:linear-gradient(90deg,#22c55e,#4ade80);}
+.school-prob-bar.target{background:linear-gradient(90deg,#3b82f6,#60a5fa);}
+.school-prob-bar.sprint{background:linear-gradient(90deg,#ef4444,#f87171);}
+.school-prob-bar.impossible{background:rgba(255,255,255,0.1);}
+.school-prob-pct{width:48px;text-align:right;font-size:13px;font-weight:700;flex-shrink:0;}
+.school-prob-tag{width:44px;text-align:center;font-size:10px;font-weight:700;padding:2px 0;border-radius:4px;flex-shrink:0;}
+.tag-stable{background:rgba(34,197,94,0.2);color:#4ade80;}
+.tag-target{background:rgba(59,130,246,0.2);color:#60a5fa;}
+.tag-sprint{background:rgba(239,68,68,0.2);color:#f87171;}
+.tag-impossible{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);}
+/* ===== Advice ===== */
+.advice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.advice-card{border-radius:12px;padding:16px;text-align:center;}
+.advice-card.sprint-ad{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);}
+.advice-card.stable-ad{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);}
+.advice-card.safe-ad{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);}
+.advice-card .ad-title{font-size:14px;font-weight:900;margin-bottom:6px;}
+.advice-card.sprint-ad .ad-title{color:#f87171;}
+.advice-card.stable-ad .ad-title{color:#4ade80;}
+.advice-card.safe-ad .ad-title{color:#60a5fa;}
+.advice-card .ad-school{font-size:13px;font-weight:600;margin-bottom:2px;}
+.advice-card .ad-desc{font-size:11px;color:rgba(255,255,255,0.45);}
+/* ===== Canvas ===== */
+.chart-wrap{margin-bottom:20px;}
+.chart-wrap canvas{width:100%;border-radius:10px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.12);}
+/* ===== System 2: Filter Bar ===== */
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;}
+.filter-bar .tabs{display:flex;gap:8px;flex-wrap:wrap;}
+.tab{padding:7px 18px;border:1px solid rgba(59,130,246,0.25);border-radius:20px;background:transparent;font-size:13px;cursor:pointer;transition:all .2s;font-weight:500;color:rgba(255,255,255,0.6);}
+.tab.active{background:#3b82f6;color:#fff;border-color:#3b82f6;}
+.tab:hover:not(.active){border-color:#3b82f6;color:#3b82f6;}
+.filter-bar .sort-group{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5);}
+.filter-bar select{padding:6px 10px;border:1px solid rgba(59,130,246,0.3);border-radius:6px;font-size:13px;background:rgba(59,130,246,0.1);color:#fff;}
+.filter-bar select option{background:#0a1628;color:#fff;}
+/* ===== Results Table ===== */
+.results-table{background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:14px;overflow:hidden;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{background:rgba(59,130,246,0.12);padding:12px 14px;text-align:left;font-size:12px;font-weight:600;color:rgba(255,255,255,0.55);white-space:nowrap;border-bottom:1px solid rgba(59,130,246,0.15);}
+tbody td{padding:11px 14px;border-bottom:1px solid rgba(59,130,246,0.1);font-size:13px;white-space:nowrap;color:rgba(255,255,255,0.85);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(59,130,246,0.06);}
+.major-name{font-weight:600;color:#fff;}
+.badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-safety{background:rgba(34,197,94,0.2);color:#4ade80;}
+.badge-match{background:rgba(234,179,8,0.2);color:#facc15;}
+.badge-reach{background:rgba(239,68,68,0.2);color:#f87171;}
+.badge-none{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35);}
+.prob-cell{display:flex;align-items:center;gap:8px;min-width:130px;}
+.prob-bar-wrap{flex:1;height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;min-width:50px;}
+.prob-bar{height:100%;border-radius:4px;transition:width .5s ease;}
+.prob-bar.safety{background:#22c55e;}
+.prob-bar.match{background:#eab308;}
+.prob-bar.reach{background:#ef4444;}
+.prob-bar.none{background:rgba(255,255,255,0.1);}
+.prob-value{font-weight:700;min-width:34px;text-align:right;font-size:12px;}
+.trend{font-size:12px;font-weight:700;}
+.trend.up{color:#f87171;}
+.trend.down{color:#4ade80;}
+.trend.stable{color:rgba(255,255,255,0.4);}
+.trend.new{color:#60a5fa;}
+.empty-state{text-align:center;padding:60px 20px;color:rgba(255,255,255,0.4);}
+.empty-state p{font-size:15px;}
+/* ===== Algo Info ===== */
+.algo-info{background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:14px;padding:20px 24px;margin-top:20px;font-size:13px;color:rgba(255,255,255,0.5);line-height:1.8;}
+.algo-info h3{font-size:15px;color:rgba(255,255,255,0.85);margin-bottom:8px;font-weight:700;}
+.algo-info ul{padding-left:20px;}
+.algo-info li{margin-bottom:4px;}
+/* ===== Responsive ===== */
+@media(max-width:768px){
+  .summary{grid-template-columns:repeat(2,1fr);}
+  .input-row{flex-direction:column;}
+  .form-group{width:100%;}
+  .advice-grid{grid-template-columns:1fr;}
+  .filter-bar{flex-direction:column;align-items:flex-start;}
+  .filter-bar .sort-group{margin-left:0;}
+  .school-prob-name{width:90px;font-size:11px;}
+  .nav-tab{font-size:14px;padding:12px 10px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Top Navigation ===== -->
+<div class="top-nav">
+  <div class="nav-tab active" data-panel="panel-zhongkao">中考志愿预测</div>
+  <div class="nav-tab" data-panel="panel-gaokao">高校录取概率</div>
+</div>
+
+<!-- ===== System 1: 中考志愿预测 ===== -->
+<div class="container">
+<div class="system-panel active" id="panel-zhongkao">
+
+  <!-- Input -->
+  <div class="card">
+    <h2>输入查询信息</h2>
+    <div class="input-row">
+      <div class="form-group">
+        <label>中考总分</label>
+        <input type="number" id="zkScore" placeholder="如：650" min="0" max="780">
+        <div class="hint">总分 0-780，输入后自动算排名</div>
+      </div>
+      <div class="form-group">
+        <label>全市排名</label>
+        <input type="number" id="zkRank" placeholder="如：3500" min="1" max="15285">
+        <div class="hint">输入排名自动反算分数</div>
+      </div>
+      <button class="btn-primary" id="zkQueryBtn">开始预测</button>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary" id="zkSummary" style="display:none;">
+    <div class="summary-card"><div class="num" id="zkSumScore">-</div><div class="label">中考总分</div></div>
+    <div class="summary-card"><div class="num" id="zkSumRank">-</div><div class="label">全市排名</div></div>
+    <div class="summary-card"><div class="num" id="zkSumPct">-</div><div class="label">超越比例</div></div>
+    <div class="summary-card"><div class="num" id="zkSumSchool">-</div><div class="label">最可能录取</div></div>
+  </div>
+
+  <!-- Rank Range -->
+  <div class="rank-range card" id="zkRankRange" style="display:none;">
+    <h2>排名区间提示</h2>
+    <div class="rank-range-bar" id="zkRangeBar"></div>
+    <div class="rank-labels"><span>第1名</span><span>第15285名</span></div>
+  </div>
+
+  <!-- School Probabilities -->
+  <div class="card" id="zkProbCard" style="display:none;">
+    <h2>各校录取概率</h2>
+    <div class="school-prob-list" id="zkProbList"></div>
+  </div>
+
+  <!-- Advice -->
+  <div class="advice-grid" id="zkAdvice" style="display:none;">
+    <div class="advice-card sprint-ad">
+      <div class="ad-title">冲一冲</div>
+      <div class="ad-school" id="zkAdvSprint">-</div>
+      <div class="ad-desc">录取概率较低，值得尝试</div>
+    </div>
+    <div class="advice-card stable-ad">
+      <div class="ad-title">稳一稳</div>
+      <div class="ad-school" id="zkAdvStable">-</div>
+      <div class="ad-desc">录取概率较高，把握较大</div>
+    </div>
+    <div class="advice-card safe-ad">
+      <div class="ad-title">保一保</div>
+      <div class="ad-school" id="zkAdvSafe">-</div>
+      <div class="ad-desc">录取概率极高，确保兜底</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card chart-wrap" id="zkChartCard" style="display:none;">
+    <h2>分数分布图</h2>
+    <canvas id="zkCanvas" height="280"></canvas>
+  </div>
+
+</div>
+
+<!-- ===== System 2: 高校录取概率 ===== -->
+<div class="system-panel" id="panel-gaokao">
+
+  <!-- Input -->
+  <div class="card">
+    <h2>查询条件</h2>
+    <div class="input-row">
+      <div class="form-group">
+        <label>科类</label>
+        <select id="subjectSelect">
+          <option value="物理类">物理类</option>
+          <option value="历史类">历史类</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1.4;">
+        <label>你的位次（省排名）</label>
+        <input type="number" id="rankInput" placeholder="如：65000" min="1">
+        <div class="hint">位次比分数更稳定，推荐使用位次查询</div>
+      </div>
+      <div class="form-group">
+        <label>你的分数（可选）</label>
+        <input type="number" id="scoreInput" placeholder="如：560" min="0">
+        <div class="hint">仅作参考，概率计算以位次为准</div>
+      </div>
+      <button class="btn-primary" id="queryBtn">查询概率</button>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary" id="summary" style="display:none;">
+    <div class="summary-card"><div class="num" id="sumTotal" style="color:#3b82f6;">0</div><div class="label">可报考专业总数</div></div>
+    <div class="summary-card s-green"><div class="num" id="sumSafety">0</div><div class="label">保底（>=85%）</div></div>
+    <div class="summary-card s-yellow"><div class="num" id="sumMatch">0</div><div class="label">稳妥（50%~85%）</div></div>
+    <div class="summary-card s-red"><div class="num" id="sumReach">0</div><div class="label">冲刺（15%~50%）</div></div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar" id="filterBar" style="display:none;">
+    <div class="tabs">
+      <div class="tab active" data-filter="all">全部</div>
+      <div class="tab" data-filter="safety">保底</div>
+      <div class="tab" data-filter="match">稳妥</div>
+      <div class="tab" data-filter="reach">冲刺</div>
+      <div class="tab" data-filter="none">不建议</div>
+    </div>
+    <div class="sort-group">
+      <span>排序：</span>
+      <select id="sortSelect">
+        <option value="prob-desc">概率从高到低</option>
+        <option value="prob-asc">概率从低到高</option>
+        <option value="rank-desc">位次从高到低</option>
+        <option value="rank-asc">位次从低到高</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="results-table" id="resultsTable">
+    <div class="empty-state"><p>请选择科类并输入位次，然后点击「查询概率」</p></div>
+  </div>
+
+  <!-- Algorithm Info -->
+  <div class="algo-info">
+    <h3>算法说明</h3>
+    <ul>
+      <li><b>核心方法</b>：位次法 — 以考生省排名与专业最低录取位次的比值为基础，通过 sigmoid 函数计算录取概率。</li>
+      <li><b>多年加权</b>：当存在多年数据时，按年份加权（2025年权重0.55，2024年权重0.30，2023年权重0.15），近期数据权重更高。</li>
+      <li><b>概率分级</b>：>=85% 为保底，50%~85% 为稳妥，15%~50% 为冲刺，&lt;15% 为不建议。</li>
+      <li><b>计算公式</b>：P = 1 / (1 + e^((r - 1.05) / 0.12))，其中 r = 考生位次 / 加权最低位次。</li>
+      <li><b>趋势标记</b>：↗ 红色表示录取位次上升（变难），↘ 绿色表示位次下降（变易），新增专业标"新"。</li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+<script>
+// =====================================================================
+//  Navigation
+// =====================================================================
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.system-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.panel).classList.add('active');
+  });
+});
+
+// =====================================================================
+//  System 1: 中考志愿预测
+// =====================================================================
+const zhongkaoSchools = [
+  { name: '武安一中', plan: 2800, cumulative: 2800, cutoff_score: 724, cutoff_cum: 2808, color: '#ef4444' },
+  { name: '武安三中', plan: 2400, cumulative: 5200, cutoff_score: 678, cutoff_cum: 5241, color: '#f97316' },
+  { name: '武安三中东山分校', plan: 1100, cumulative: 6300, cutoff_score: 648, cutoff_cum: 6315, color: '#eab308' },
+  { name: '洺湖中学', plan: 700, cumulative: 7000, cutoff_score: 627, cutoff_cum: 7010, color: '#22c55e' },
+  { name: '武安十中', plan: 1500, cumulative: 8500, cutoff_score: 573, cutoff_cum: 8510, color: '#3b82f6' },
+  { name: '西岭湖中学', plan: 500, cumulative: 9000, cutoff_score: 554, cutoff_cum: 9014, color: '#8b5cf6' },
+  { name: '武安六中', plan: 900, cumulative: 9900, cutoff_score: 518, cutoff_cum: 9920, color: '#06b6d4' },
+  { name: '职教中心普高班', plan: 100, cumulative: 10000, cutoff_score: 514, cutoff_cum: 10009, color: '#94a3b8' },
+  { name: '职教中心', plan: 2800, cumulative: 12800, cutoff_score: 383, cutoff_cum: 12804, color: '#64748b' },
+];
+const TOTAL_STUDENTS = 15285;
+const TOTAL_ENROLLMENT = 12800;
+
+const scoreData = [[780,50,50],[779,9,59],[778,12,71],[777,12,83],[776,15,98],[775,14,112],[774,12,124],[773,22,146],[772,24,170],[771,27,197],[770,25,222],[769,28,250],[768,20,270],[767,36,306],[766,21,327],[765,43,370],[764,40,410],[763,36,446],[762,38,484],[761,43,527],[760,48,575],[759,50,625],[758,40,665],[757,50,715],[756,38,753],[755,55,808],[754,55,863],[753,58,921],[752,52,973],[751,67,1040],[750,68,1108],[749,63,1171],[748,77,1248],[747,67,1315],[746,57,1372],[745,65,1437],[744,57,1494],[743,64,1558],[742,60,1618],[741,80,1698],[740,64,1762],[739,73,1835],[738,78,1913],[737,66,1979],[736,79,2058],[735,60,2118],[734,65,2183],[733,84,2267],[732,61,2328],[731,62,2390],[730,62,2452],[729,66,2518],[728,71,2589],[727,50,2639],[726,60,2699],[725,62,2761],[724,47,2808],[723,74,2882],[722,56,2938],[721,64,3002],[720,58,3060],[719,65,3125],[718,58,3183],[717,60,3243],[716,60,3303],[715,62,3365],[714,58,3423],[713,58,3481],[712,50,3531],[711,71,3602],[710,59,3661],[709,58,3719],[708,57,3776],[707,59,3835],[706,62,3897],[705,59,3956],[704,47,4003],[703,59,4062],[702,55,4117],[701,44,4161],[700,50,4211],[699,36,4247],[698,51,4298],[697,51,4349],[696,44,4393],[695,42,4435],[694,55,4490],[693,45,4535],[692,41,4576],[691,48,4624],[690,55,4679],[689,45,4724],[688,50,4774],[687,45,4819],[686,53,4872],[685,44,4916],[684,45,4961],[683,40,5001],[682,50,5051],[681,61,5112],[680,44,5156],[679,42,5198],[678,43,5241],[677,53,5294],[676,44,5338],[675,41,5379],[674,41,5420],[673,43,5463],[672,34,5497],[671,58,5555],[670,38,5593],[669,46,5639],[668,31,5670],[667,39,5709],[666,32,5741],[665,27,5768],[664,36,5804],[663,35,5839],[662,39,5878],[661,38,5916],[660,44,5960],[659,25,5985],[658,17,6002],[657,26,6028],[656,31,6059],[655,29,6088],[654,29,6117],[653,45,6162],[652,23,6185],[651,36,6221],[650,35,6256],[649,30,6286],[648,29,6315],[647,38,6353],[646,40,6393],[645,39,6432],[644,31,6463],[643,36,6499],[642,23,6522],[641,40,6562],[640,35,6597],[639,34,6631],[638,31,6662],[637,33,6695],[636,30,6725],[635,27,6752],[634,37,6789],[633,28,6817],[632,36,6853],[631,33,6886],[630,39,6925],[629,27,6952],[628,34,6986],[627,24,7010],[626,31,7041],[625,29,7070],[624,28,7098],[623,23,7121],[622,25,7146],[621,36,7182],[620,30,7212],[619,32,7244],[618,42,7286],[617,27,7313],[616,28,7341],[615,45,7386],[614,32,7418],[613,30,7448],[612,25,7473],[611,34,7507],[610,31,7538],[609,26,7564],[608,24,7588],[607,24,7612],[606,20,7632],[605,33,7665],[604,24,7689],[603,43,7732],[602,23,7755],[601,23,7778],[600,29,7807],[599,33,7840],[598,18,7858],[597,18,7876],[596,29,7905],[595,26,7931],[594,27,7958],[593,24,7982],[592,27,8009],[591,21,8030],[590,27,8057],[589,29,8086],[588,28,8114],[587,24,8138],[586,29,8167],[585,27,8194],[584,29,8223],[583,32,8255],[582,19,8274],[581,26,8300],[580,17,8317],[579,35,8352],[578,34,8386],[577,33,8419],[576,21,8440],[575,29,8469],[574,24,8493],[573,17,8510],[572,36,8546],[571,27,8573],[570,23,8596],[569,21,8617],[568,35,8652],[567,30,8682],[566,26,8708],[565,20,8728],[564,32,8760],[563,22,8782],[562,17,8799],[561,27,8826],[560,22,8848],[559,32,8880],[558,22,8902],[557,23,8925],[556,30,8955],[555,28,8983],[554,31,9014],[553,34,9048],[552,23,9071],[551,24,9095],[550,24,9119],[549,24,9143],[548,20,9163],[547,30,9193],[546,34,9227],[545,26,9253],[544,25,9278],[543,29,9307],[542,24,9331],[541,21,9352],[540,26,9378],[539,37,9415],[538,28,9443],[537,29,9472],[536,25,9497],[535,28,9525],[534,18,9543],[533,29,9572],[532,20,9592],[531,33,9625],[530,18,9643],[529,19,9662],[528,20,9682],[527,33,9715],[526,24,9739],[525,22,9761],[524,23,9784],[523,26,9810],[522,21,9831],[521,25,9856],[520,25,9881],[519,15,9896],[518,24,9920],[517,22,9942],[516,23,9965],[515,25,9990],[514,19,10009],[513,24,10033],[512,31,10064],[511,17,10081],[510,21,10102],[509,29,10131],[508,21,10152],[507,15,10167],[506,23,10190],[505,23,10213],[504,31,10244],[503,21,10265],[502,19,10284],[501,29,10313],[500,18,10331],[499,21,10352],[498,26,10378],[497,24,10402],[496,32,10434],[495,24,10458],[494,22,10480],[493,26,10506],[492,21,10527],[491,23,10550],[490,24,10574],[489,21,10595],[488,20,10615],[487,29,10644],[486,13,10657],[485,38,10695],[484,20,10715],[483,21,10736],[482,25,10761],[481,22,10783],[480,29,10812],[479,15,10827],[478,23,10850],[477,27,10877],[476,21,10898],[475,16,10914],[474,23,10937],[473,21,10958],[472,19,10977],[471,23,11000],[470,24,11024],[469,18,11042],[468,17,11059],[467,39,11098],[466,26,11124],[465,20,11144],[464,18,11162],[463,25,11187],[462,23,11210],[461,19,11229],[460,28,11257],[459,25,11282],[458,20,11302],[457,15,11317],[456,22,11339],[455,20,11359],[454,20,11379],[453,23,11402],[452,23,11425],[451,28,11453],[450,17,11470],[449,20,11490],[448,21,11511],[447,19,11530],[446,18,11548],[445,23,11571],[444,25,11596],[443,19,11615],[442,26,11641],[441,23,11664],[440,18,11682],[439,22,11704],[438,24,11728],[437,24,11752],[436,22,11774],[435,15,11789],[434,21,11810],[433,13,11823],[432,19,11842],[431,17,11859],[430,21,11880],[429,17,11897],[428,22,11919],[427,26,11945],[426,17,11962],[425,25,11987],[424,33,12020],[423,15,12035],[422,20,12055],[421,18,12073],[420,19,12092],[419,16,12108],[418,19,12127],[417,20,12147],[416,17,12164],[415,21,12185],[414,27,12212],[413,13,12225],[412,23,12248],[411,16,12264],[410,22,12286],[409,17,12303],[408,17,12320],[407,21,12341],[406,19,12360],[405,19,12379],[404,12,12391],[403,17,12408],[402,20,12428],[401,24,12452],[400,16,12468],[399,19,12487],[398,28,12515],[397,27,12542],[396,17,12559],[395,11,12570],[394,16,12586],[393,18,12604],[392,22,12626],[391,14,12640],[390,24,12664],[389,27,12691],[388,29,12720],[387,18,12738],[386,20,12758],[385,17,12775],[384,12,12787],[383,17,12804],[382,18,12822],[381,21,12843],[380,18,12861],[379,16,12877],[378,15,12892],[377,22,12914],[376,15,12929],[375,12,12941],[374,16,12957],[373,14,12971],[372,14,12985],[371,15,13000],[370,21,13021],[369,12,13033],[368,20,13053],[367,20,13073],[366,14,13087],[365,22,13109],[364,19,13128],[363,8,13136],[362,19,13155],[361,19,13174],[360,14,13188],[359,12,13200],[358,15,13215],[357,12,13227],[356,14,13241],[355,9,13250],[354,8,13258],[353,12,13270],[352,12,13282],[351,20,13302],[350,13,13315],[349,13,13328],[348,10,13338],[347,17,13355],[346,12,13367],[345,15,13382],[344,15,13397],[343,17,13414],[342,14,13428],[341,17,13445],[340,14,13459],[339,12,13471],[338,14,13485],[337,13,13498],[336,13,13511],[335,10,13521],[334,23,13544],[333,15,13559],[332,17,13576],[331,20,13596],[330,17,13613],[329,16,13629],[328,14,13643],[327,14,13657],[326,14,13671],[325,14,13685],[324,13,13698],[323,16,13714],[322,15,13729],[321,11,13740],[320,9,13749],[319,9,13758],[318,10,13768],[317,12,13780],[316,14,13794],[315,12,13806],[314,8,13814],[313,8,13822],[312,15,13837],[311,11,13848],[310,10,13858],[309,15,13873],[308,8,13881],[307,14,13895],[306,11,13906],[305,8,13914],[304,7,13921],[303,14,13935],[302,14,13949],[301,8,13957],[300,15,13972],[299,10,13982],[298,8,13990],[297,3,13993],[296,16,14009],[295,15,14024],[294,11,14035],[293,12,14047],[292,14,14061],[291,10,14071],[290,14,14085],[289,13,14098],[288,6,14104],[287,6,14110],[286,6,14116],[285,14,14130],[284,11,14141],[283,9,14150],[282,9,14159],[281,6,14165],[280,12,14177],[279,7,14184],[278,12,14196],[277,6,14202],[276,5,14207],[275,13,14220],[274,6,14226],[273,4,14230],[272,5,14235],[271,12,14247],[270,13,14260],[269,11,14271],[268,7,14278],[267,10,14288],[266,8,14296],[265,10,14306],[264,4,14310],[263,8,14318],[262,8,14326],[261,15,14341],[260,13,14354],[259,6,14360],[258,4,14364],[257,9,14373],[256,8,14381],[255,9,14390],[254,8,14398],[253,10,14408],[252,5,14413],[251,12,14425],[250,6,14431],[249,14,14445],[248,12,14457],[247,3,14460],[246,7,14467],[245,3,14470],[244,5,14475],[243,9,14484],[242,6,14490],[241,9,14499],[240,14,14513],[239,6,14519],[238,6,14525],[237,9,14534],[236,5,14539],[235,6,14545],[234,8,14553],[233,7,14560],[232,9,14569],[231,6,14575],[230,10,14585],[229,8,14593],[228,6,14599],[227,8,14607],[226,10,14617],[225,7,14624],[224,7,14631],[223,10,14641],[222,7,14648],[221,9,14657],[220,10,14667],[219,6,14673],[218,5,14678],[217,7,14685],[216,5,14690],[215,6,14696],[214,5,14701],[213,6,14707],[212,10,14717],[211,11,14728],[210,4,14732],[209,6,14738],[208,6,14744],[207,9,14753],[206,2,14755],[205,4,14759],[204,6,14765],[203,10,14775],[202,10,14785],[201,7,14792],[200,8,14800],[199,2,14802],[198,5,14807],[197,8,14815],[196,7,14822],[195,2,14824],[194,5,14829],[193,3,14832],[192,1,14833],[191,5,14838],[190,4,14842],[189,3,14845],[188,6,14851],[187,7,14858],[186,4,14862],[185,8,14870],[184,5,14875],[183,6,14881],[182,7,14888],[181,3,14891],[180,5,14896],[179,10,14906],[178,8,14914],[177,5,14919],[176,8,14927],[175,3,14930],[174,7,14937],[173,3,14940],[172,4,14944],[171,6,14950],[170,5,14955],[169,1,14956],[168,5,14961],[167,7,14968],[166,9,14977],[165,5,14982],[164,5,14987],[163,6,14993],[162,4,14997],[161,3,15000],[160,4,15004],[159,4,15008],[158,3,15011],[157,2,15013],[156,1,15014],[155,3,15017],[154,5,15022],[153,5,15027],[152,5,15032],[151,4,15036],[150,3,15039],[149,1,15040],[148,3,15043],[146,4,15047],[145,8,15055],[144,2,15057],[143,3,15060],[142,5,15065],[141,4,15069],[140,1,15070],[139,2,15072],[138,3,15075],[137,5,15080],[136,4,15084],[133,3,15087],[132,2,15089],[131,3,15092],[130,3,15095],[129,4,15099],[128,4,15103],[127,5,15108],[126,4,15112],[125,4,15116],[124,3,15119],[123,2,15121],[122,3,15124],[121,3,15127],[120,2,15129],[119,6,15135],[118,3,15138],[117,2,15140],[116,8,15148],[115,1,15149],[114,6,15155],[113,4,15159],[112,4,15163],[111,1,15164],[110,2,15166],[109,4,15170],[108,6,15176],[107,3,15179],[106,2,15181],[105,2,15183],[103,1,15184],[102,3,15187],[101,3,15190],[100,2,15192],[98,1,15193],[97,1,15194],[96,4,15198],[95,4,15202],[94,2,15204],[93,3,15207],[92,1,15208],[91,3,15211],[90,4,15215],[89,1,15216],[87,1,15217],[86,2,15219],[85,1,15220],[83,2,15222],[82,1,15223],[81,1,15224],[80,1,15225],[79,2,15227],[76,1,15228],[74,2,15230],[73,3,15233],[72,1,15234],[71,1,15235],[70,5,15240],[69,3,15243],[68,1,15244],[66,3,15247],[64,1,15248],[63,1,15249],[62,2,15251],[61,3,15254],[60,1,15255],[58,2,15257],[55,1,15258],[54,1,15259],[53,1,15260],[52,2,15262],[51,1,15263],[50,1,15264],[49,2,15266],[47,3,15269],[45,2,15271],[44,5,15276],[43,5,15281],[42,1,15282],[41,1,15283],[39,2,15285]];
+
+// Find rank from score
+function findRank(score) {
+  if (score > 780) return 1;
+  if (score < 39) return TOTAL_STUDENTS;
+  for (let i = 0; i < scoreData.length; i++) {
+    if (scoreData[i][0] === score) return scoreData[i][2];
+    if (i > 0 && scoreData[i][0] < score && scoreData[i-1][0] > score) {
+      return scoreData[i][2];
+    }
+  }
+  return TOTAL_STUDENTS;
+}
+
+// Find score from rank (reverse lookup)
+function findScoreByRank(rank) {
+  if (rank <= 0) return 780;
+  if (rank >= TOTAL_STUDENTS) return 39;
+  for (let i = 0; i < scoreData.length; i++) {
+    if (scoreData[i][2] >= rank) return scoreData[i][0];
+  }
+  return 39;
+}
+
+// Calculate probability for a school given rank
+function calcSchoolProb(rank, school) {
+  if (rank <= school.cumulative) {
+    const margin = school.cumulative - rank;
+    if (margin > 50) return 99;
+    if (margin > 20) return 95;
+    // boundary
+    const ratio = margin / 50;
+    return Math.round(50 + 45 * ratio);
+  } else {
+    const gap = rank - school.cumulative;
+    if (gap > 200) return 0;
+    // threshold decay
+    const ratio = 1 - gap / 200;
+    return Math.round(50 * ratio * ratio);
+  }
+}
+
+// Score/rank auto-sync
+let syncLock = false;
+const zkScoreEl = document.getElementById('zkScore');
+const zkRankEl = document.getElementById('zkRank');
+
+zkScoreEl.addEventListener('input', () => {
+  if (syncLock) return;
+  syncLock = true;
+  const s = parseInt(zkScoreEl.value);
+  if (!isNaN(s) && s >= 39 && s <= 780) {
+    zkRankEl.value = findRank(s);
+  }
+  syncLock = false;
+});
+
+zkRankEl.addEventListener('input', () => {
+  if (syncLock) return;
+  syncLock = true;
+  const r = parseInt(zkRankEl.value);
+  if (!isNaN(r) && r >= 1 && r <= TOTAL_STUDENTS) {
+    zkScoreEl.value = findScoreByRank(r);
+  }
+  syncLock = false;
+});
+
+// Query button
+document.getElementById('zkQueryBtn').addEventListener('click', doZkQuery);
+zkScoreEl.addEventListener('keydown', e => { if (e.key === 'Enter') doZkQuery(); });
+zkRankEl.addEventListener('keydown', e => { if (e.key === 'Enter') doZkQuery(); });
+
+function doZkQuery() {
+  const score = parseInt(zkScoreEl.value);
+  const rank = parseInt(zkRankEl.value);
+  if (isNaN(score) && isNaN(rank)) {
+    alert('请输入中考总分或全市排名');
+    return;
+  }
+  let finalScore = score, finalRank = rank;
+  if (!isNaN(score) && isNaN(rank)) {
+    finalRank = findRank(score);
+    zkRankEl.value = finalRank;
+  } else if (isNaN(score) && !isNaN(rank)) {
+    finalScore = findScoreByRank(rank);
+    zkScoreEl.value = finalScore;
+  } else {
+    // both provided, trust score
+    finalRank = findRank(score);
+    zkRankEl.value = finalRank;
+  }
+
+  // Summary
+  const pct = ((1 - finalRank / TOTAL_STUDENTS) * 100).toFixed(1);
+  let bestSchool = zhongkaoSchools[zhongkaoSchools.length - 1].name;
+  for (const s of zhongkaoSchools) {
+    if (finalRank <= s.cutoff_cum) { bestSchool = s.name; break; }
+  }
+  document.getElementById('zkSumScore').textContent = finalScore;
+  document.getElementById('zkSumRank').textContent = finalRank;
+  document.getElementById('zkSumPct').textContent = pct + '%';
+  document.getElementById('zkSumSchool').textContent = bestSchool;
+  document.getElementById('zkSummary').style.display = 'grid';
+
+  // Rank range
+  renderRankRange(finalRank);
+  document.getElementById('zkRankRange').style.display = 'block';
+
+  // Probabilities
+  renderSchoolProbs(finalRank);
+  document.getElementById('zkProbCard').style.display = 'block';
+
+  // Advice
+  renderAdvice(finalRank);
+  document.getElementById('zkAdvice').style.display = 'grid';
+
+  // Chart
+  renderChart(finalScore, finalRank);
+  document.getElementById('zkChartCard').style.display = 'block';
+}
+
+function renderRankRange(rank) {
+  const bar = document.getElementById('zkRangeBar');
+  let html = '';
+  // segments for each school
+  const colors = zhongkaoSchools.map(s => s.color);
+  for (let i = 0; i < zhongkaoSchools.length; i++) {
+    const s = zhongkaoSchools[i];
+    const startPct = i === 0 ? 0 : (zhongkaoSchools[i-1].cumulative / TOTAL_STUDENTS * 100);
+    const endPct = s.cumulative / TOTAL_STUDENTS * 100;
+    const width = endPct - startPct;
+    html += `<div class="rank-range-segment" style="left:${startPct}%;width:${width}%;background:${s.color}33;">${width > 5 ? s.name : ''}</div>`;
+  }
+  // marker
+  const markerPct = (rank / TOTAL_STUDENTS * 100);
+  html += `<div class="rank-marker" style="left:${markerPct}%;"></div>`;
+  bar.innerHTML = html;
+}
+
+function renderSchoolProbs(rank) {
+  const list = document.getElementById('zkProbList');
+  let html = '';
+  for (const s of zhongkaoSchools) {
+    const prob = calcSchoolProb(rank, s);
+    let barClass, tagClass, tagText;
+    if (prob >= 85) { barClass = 'stable'; tagClass = 'tag-stable'; tagText = '稳妥'; }
+    else if (prob >= 40) { barClass = 'target'; tagClass = 'tag-target'; tagText = '目标'; }
+    else if (prob > 0) { barClass = 'sprint'; tagClass = 'tag-sprint'; tagText = '冲刺'; }
+    else { barClass = 'impossible'; tagClass = 'tag-impossible'; tagText = '无望'; }
+    const pctColor = prob >= 85 ? '#4ade80' : prob >= 40 ? '#60a5fa' : prob > 0 ? '#f87171' : 'rgba(255,255,255,0.25)';
+    html += `<div class="school-prob-item">
+      <div class="school-prob-name" style="color:${s.color};">${s.name}</div>
+      <div class="school-prob-bar-wrap">
+        <div class="school-prob-bar ${barClass}" style="width:${Math.max(prob, 1)}%;"></div>
+      </div>
+      <div class="school-prob-pct" style="color:${pctColor};">${prob}%</div>
+      <div class="school-prob-tag ${tagClass}">${tagText}</div>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function renderAdvice(rank) {
+  let sprint = null, stable = null, safe = null;
+  for (const s of zhongkaoSchools) {
+    const prob = calcSchoolProb(rank, s);
+    if (prob >= 85 && !safe) safe = s;
+    if (prob >= 40 && prob < 85 && !stable) stable = s;
+    if (prob > 0 && prob < 40 && !sprint) sprint = s;
+  }
+  // If no sprint, try the school just above the best match
+  if (!sprint) {
+    for (let i = 0; i < zhongkaoSchools.length; i++) {
+      const prob = calcSchoolProb(rank, zhongkaoSchools[i]);
+      if (prob > 0 && prob < 85) { sprint = zhongkaoSchools[i]; break; }
+    }
+  }
+  document.getElementById('zkAdvSprint').textContent = sprint ? sprint.name + ' (' + calcSchoolProb(rank, sprint) + '%)' : '无';
+  document.getElementById('zkAdvStable').textContent = stable ? stable.name + ' (' + calcSchoolProb(rank, stable) + '%)' : '无';
+  document.getElementById('zkAdvSafe').textContent = safe ? safe.name + ' (' + calcSchoolProb(rank, safe) + '%)' : '无';
+}
+
+function renderChart(curScore, curRank) {
+  const canvas = document.getElementById('zkCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 280 * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 280;
+  const padL = 48, padR = 16, padT = 20, padB = 32;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Score range 380-780
+  const minS = 380, maxS = 780;
+  const scoreToX = s => padL + (s - minS) / (maxS - minS) * plotW;
+
+  // Build count array for 380-780
+  const counts = [];
+  let maxCount = 0;
+  for (let s = minS; s <= maxS; s++) {
+    const entry = scoreData.find(d => d[0] === s);
+    const c = entry ? entry[1] : 0;
+    counts.push(c);
+    if (c > maxCount) maxCount = c;
+  }
+  maxCount = Math.max(maxCount, 1);
+
+  // Draw distribution curve
+  ctx.beginPath();
+  ctx.moveTo(scoreToX(minS), padT + plotH);
+  for (let i = 0; i < counts.length; i++) {
+    const x = scoreToX(minS + i);
+    const y = padT + plotH - (counts[i] / maxCount) * plotH * 0.9;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(scoreToX(maxS), padT + plotH);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+  grad.addColorStop(0, 'rgba(59,130,246,0.5)');
+  grad.addColorStop(1, 'rgba(59,130,246,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Curve outline
+  ctx.beginPath();
+  for (let i = 0; i < counts.length; i++) {
+    const x = scoreToX(minS + i);
+    const y = padT + plotH - (counts[i] / maxCount) * plotH * 0.9;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // School cutoff lines
+  for (const s of zhongkaoSchools) {
+    if (s.cutoff_score < minS || s.cutoff_score > maxS) continue;
+    const x = scoreToX(s.cutoff_score);
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.strokeStyle = s.color + 'aa';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // label
+    ctx.fillStyle = s.color;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.name.substring(0, 4), x, padT + plotH + 12);
+    ctx.fillText(s.cutoff_score + '分', x, padT + plotH + 24);
+  }
+
+  // Current score vertical line
+  if (curScore >= minS && curScore <= maxS) {
+    const x = scoreToX(curScore);
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // glow
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    // label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(curScore + '分 第' + curRank + '名', x, padT - 4);
+  }
+
+  // Y axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(maxCount * (4 - i) / 4);
+    const y = padT + plotH * i / 4;
+    ctx.fillText(val + '人', padL - 6, y + 4);
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + plotW, y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // X axis label
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(minS + '', padL, padT + plotH + 12);
+  ctx.fillText(maxS + '', padL + plotW, padT + plotH + 12);
+}
+
+// Resize chart
+window.addEventListener('resize', () => {
+  if (document.getElementById('zkChartCard').style.display !== 'none') {
+    const s = parseInt(zkScoreEl.value);
+    const r = parseInt(zkRankEl.value);
+    if (!isNaN(s)) renderChart(s, isNaN(r) ? findRank(s) : r);
+  }
+});
+
+// =====================================================================
+//  System 2: 高校录取概率查询
+// =====================================================================
+const admissionData = [
+  { subject: "物理类", major: "法学", years: { 2023: { rank: 56064, score: 541 }, 2024: { rank: 57150, score: 549 }, 2025: { rank: 63946, score: 563 } } },
+  { subject: "物理类", major: "会计学（CPA）", years: { 2024: { rank: 63909, score: 543 }, 2025: { rank: 63946, score: 563 } } },
+  { subject: "物理类", major: "知识产权", years: { 2023: { rank: 68584, score: 528 }, 2024: { rank: 70986, score: 537 }, 2025: { rank: 63946, score: 563 } } },
+  { subject: "物理类", major: "会计学（ACCA）", years: { 2024: { rank: 66174, score: 541 }, 2025: { rank: 66470, score: 561 } } },
+  { subject: "物理类", major: "会计学", years: { 2023: { rank: 68584, score: 528 }, 2024: { rank: 66174, score: 541 }, 2025: { rank: 67726, score: 560 } } },
+  { subject: "物理类", major: "财务管理", years: { 2023: { rank: 71670, score: 525 }, 2024: { rank: 69761, score: 538 }, 2025: { rank: 70324, score: 558 } } },
+  { subject: "物理类", major: "审计学", years: { 2023: { rank: 69642, score: 527 }, 2024: { rank: 70986, score: 537 }, 2025: { rank: 74291, score: 555 } } },
+  { subject: "物理类", major: "财政学", years: { 2023: { rank: 66510, score: 530 }, 2024: { rank: 74627, score: 534 }, 2025: { rank: 81112, score: 550 } } },
+  { subject: "物理类", major: "计算机科学与技术", years: { 2023: { rank: 75935, score: 521 }, 2024: { rank: 78429, score: 531 }, 2025: { rank: 81112, score: 550 } } },
+  { subject: "物理类", major: "金融学", years: { 2023: { rank: 66510, score: 530 }, 2024: { rank: 75867, score: 533 }, 2025: { rank: 83898, score: 548 } } },
+  { subject: "物理类", major: "数据科学与大数据技术", years: { 2023: { rank: 79198, score: 518 }, 2024: { rank: 82247, score: 528 }, 2025: { rank: 83898, score: 548 } } },
+  { subject: "物理类", major: "税收学", years: { 2023: { rank: 72721, score: 524 }, 2024: { rank: 79669, score: 530 }, 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "经济学", years: { 2023: { rank: 78078, score: 519 }, 2024: { rank: 82247, score: 528 }, 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "信息安全", years: { 2023: { rank: 80365, score: 517 }, 2024: { rank: 83566, score: 527 }, 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "大数据管理与应用", years: { 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "物联网工程", years: { 2024: { rank: 86309, score: 525 }, 2025: { rank: 91027, score: 543 } } },
+  { subject: "物理类", major: "经济统计学", years: { 2023: { rank: 81468, score: 516 }, 2024: { rank: 87643, score: 524 }, 2025: { rank: 95459, score: 540 } } },
+  { subject: "物理类", major: "智能科学与技术", years: { 2023: { rank: 86019, score: 512 }, 2024: { rank: 90382, score: 522 }, 2025: { rank: 95459, score: 540 } } },
+  { subject: "物理类", major: "人工智能", years: { 2023: { rank: 90687, score: 508 }, 2024: { rank: 94287, score: 519 }, 2025: { rank: 98476, score: 538 } } },
+  { subject: "物理类", major: "英语", years: { 2023: { rank: 78078, score: 519 }, 2024: { rank: 84920, score: 526 }, 2025: { rank: 99987, score: 537 } } },
+  { subject: "物理类", major: "数据计算及应用", years: { 2023: { rank: 82588, score: 515 }, 2024: { rank: 90382, score: 522 }, 2025: { rank: 99987, score: 537 } } },
+  { subject: "物理类", major: "应用统计学", years: { 2023: { rank: 88306, score: 510 }, 2024: { rank: 95680, score: 518 }, 2025: { rank: 101526, score: 536 } } },
+  { subject: "物理类", major: "商务英语", years: { 2023: { rank: 89507, score: 509 }, 2024: { rank: 95680, score: 518 }, 2025: { rank: 104591, score: 534 } } },
+  { subject: "物理类", major: "区块链工程", years: { 2023: { rank: 91868, score: 507 }, 2024: { rank: 99972, score: 515 }, 2025: { rank: 106095, score: 533 } } },
+  { subject: "物理类", major: "国际经济与贸易", years: { 2023: { rank: 87137, score: 511 }, 2024: { rank: 97045, score: 517 }, 2025: { rank: 107712, score: 532 } } },
+  { subject: "物理类", major: "会计学（中外合作办学）", years: { 2023: { rank: 91868, score: 507 }, 2024: { rank: 98499, score: 516 }, 2025: { rank: 107712, score: 532 } } },
+  { subject: "物理类", major: "工商管理", years: { 2023: { rank: 89507, score: 509 }, 2024: { rank: 101439, score: 514 }, 2025: { rank: 107712, score: 532 } } },
+  { subject: "物理类", major: "金融数学", years: { 2023: { rank: 82588, score: 515 }, 2024: { rank: 98499, score: 516 }, 2025: { rank: 109287, score: 531 } } },
+  { subject: "物理类", major: "金融工程", years: { 2023: { rank: 90687, score: 508 }, 2024: { rank: 101439, score: 514 }, 2025: { rank: 109287, score: 531 } } },
+  { subject: "物理类", major: "数字经济", years: { 2023: { rank: 87137, score: 511 }, 2024: { rank: 101439, score: 514 }, 2025: { rank: 112447, score: 529 } } },
+  { subject: "物理类", major: "工商管理（数智化管理创新班）", years: { 2025: { rank: 114051, score: 528 } } },
+  { subject: "物理类", major: "电子商务", years: { 2023: { rank: 91868, score: 507 }, 2024: { rank: 102928, score: 513 }, 2025: { rank: 115590, score: 527 } } },
+  { subject: "物理类", major: "精算学", years: { 2023: { rank: 100365, score: 500 }, 2024: { rank: 107334, score: 510 }, 2025: { rank: 115590, score: 527 } } },
+  { subject: "物理类", major: "供应链管理", years: { 2023: { rank: 97924, score: 502 }, 2024: { rank: 104398, score: 512 }, 2025: { rank: 117158, score: 526 } } },
+  { subject: "物理类", major: "财务管理（中外合作办学）", years: { 2023: { rank: 99166, score: 501 }, 2024: { rank: 108861, score: 509 }, 2025: { rank: 117158, score: 526 } } },
+  { subject: "物理类", major: "人力资源管理", years: { 2024: { rank: 108861, score: 509 }, 2025: { rank: 118812, score: 525 } } },
+  { subject: "物理类", major: "信用管理", years: { 2023: { rank: 95445, score: 504 }, 2024: { rank: 108861, score: 509 }, 2025: { rank: 118812, score: 525 } } },
+  { subject: "物理类", major: "保险学", years: { 2023: { rank: 96663, score: 503 }, 2024: { rank: 111884, score: 507 }, 2025: { rank: 120435, score: 524 } } },
+  { subject: "物理类", major: "投资学", years: { 2023: { rank: 89507, score: 509 }, 2024: { rank: 108861, score: 509 }, 2025: { rank: 122069, score: 523 } } },
+  { subject: "物理类", major: "金融科技", years: { 2023: { rank: 122119, score: 483 }, 2024: { rank: 114901, score: 505 }, 2025: { rank: 122069, score: 523 } } },
+  { subject: "物理类", major: "金融学（中外合作办学）", years: { 2023: { rank: 106586, score: 495 }, 2024: { rank: 125913, score: 498 }, 2025: { rank: 131912, score: 517 } } },
+  { subject: "物理类", major: "翻译", years: { 2023: { rank: 86019, score: 512 }, 2024: { rank: 101439, score: 514 } } },
+  { subject: "物理类", major: "市场营销", years: { 2024: { rank: 110329, score: 508 } } },
+  { subject: "历史类", major: "会计学（CPA）", years: { 2024: { rank: 15144, score: 553 }, 2025: { rank: 12935, score: 575 } } },
+  { subject: "历史类", major: "会计学（ACCA）", years: { 2024: { rank: 15800, score: 551 }, 2025: { rank: 13600, score: 573 } } },
+  { subject: "历史类", major: "会计学", years: { 2023: { rank: 18868, score: 524 }, 2024: { rank: 16776, score: 548 }, 2025: { rank: 14639, score: 570 } } },
+  { subject: "历史类", major: "法学", years: { 2023: { rank: 19596, score: 522 }, 2024: { rank: 18119, score: 544 }, 2025: { rank: 17629, score: 562 } } },
+  { subject: "历史类", major: "审计学", years: { 2023: { rank: 20750, score: 519 }, 2024: { rank: 18458, score: 543 }, 2025: { rank: 16810, score: 564 } } },
+  { subject: "历史类", major: "金融学", years: { 2023: { rank: 20750, score: 519 }, 2024: { rank: 18794, score: 542 }, 2025: { rank: 18388, score: 560 } } },
+  { subject: "历史类", major: "财政学", years: { 2023: { rank: 20329, score: 520 }, 2024: { rank: 19536, score: 540 }, 2025: { rank: 19202, score: 558 } } },
+  { subject: "历史类", major: "财务管理", years: { 2023: { rank: 22642, score: 514 }, 2024: { rank: 19926, score: 539 }, 2025: { rank: 17998, score: 561 } } },
+  { subject: "历史类", major: "知识产权", years: { 2023: { rank: 21136, score: 518 }, 2024: { rank: 21033, score: 536 }, 2025: { rank: 20836, score: 554 } } },
+  { subject: "历史类", major: "税收学", years: { 2023: { rank: 21888, score: 516 }, 2024: { rank: 21033, score: 536 }, 2025: { rank: 19979, score: 556 } } },
+  { subject: "历史类", major: "经济学", years: { 2023: { rank: 23072, score: 513 }, 2024: { rank: 21854, score: 534 }, 2025: { rank: 20836, score: 554 } } },
+  { subject: "历史类", major: "经济统计学", years: { 2023: { rank: 24350, score: 510 } } },
+  { subject: "历史类", major: "国际经济与贸易", years: { 2023: { rank: 25626, score: 507 }, 2024: { rank: 24676, score: 527 }, 2025: { rank: 23983, score: 547 } } },
+  { subject: "历史类", major: "金融数学", years: { 2023: { rank: 26504, score: 505 } } },
+  { subject: "历史类", major: "保险学", years: { 2023: { rank: 28755, score: 500 }, 2024: { rank: 25522, score: 525 }, 2025: { rank: 20836, score: 554 } } },
+  { subject: "历史类", major: "会计学（中外合作办学）", years: { 2023: { rank: 26951, score: 504 }, 2024: { rank: 25988, score: 524 }, 2025: { rank: 23983, score: 547 } } },
+  { subject: "历史类", major: "投资学", years: { 2023: { rank: 27841, score: 502 }, 2024: { rank: 25988, score: 524 }, 2025: { rank: 23511, score: 548 } } },
+  { subject: "历史类", major: "电子商务", years: { 2023: { rank: 26951, score: 504 }, 2024: { rank: 26429, score: 523 }, 2025: { rank: 24943, score: 545 } } },
+  { subject: "历史类", major: "信用管理", years: { 2023: { rank: 27841, score: 502 }, 2024: { rank: 26898, score: 522 }, 2025: { rank: 24943, score: 545 } } },
+  { subject: "历史类", major: "供应链管理", years: { 2023: { rank: 29683, score: 498 }, 2024: { rank: 27324, score: 521 }, 2025: { rank: 25427, score: 544 } } },
+  { subject: "历史类", major: "工商管理", years: { 2023: { rank: 30136, score: 497 }, 2024: { rank: 27790, score: 520 }, 2025: { rank: 22582, score: 550 } } },
+  { subject: "历史类", major: "工商管理（数智化管理创新班）", years: { 2025: { rank: 22582, score: 550 } } },
+  { subject: "历史类", major: "英语", years: { 2023: { rank: 28305, score: 501 }, 2024: { rank: 28258, score: 519 }, 2025: { rank: 27280, score: 540 } } },
+  { subject: "历史类", major: "人力资源管理", years: { 2024: { rank: 28258, score: 519 }, 2025: { rank: 26359, score: 542 } } },
+  { subject: "历史类", major: "财务管理（中外合作办学）", years: { 2023: { rank: 30136, score: 497 }, 2024: { rank: 29179, score: 517 }, 2025: { rank: 28223, score: 538 } } },
+  { subject: "历史类", major: "翻译", years: { 2023: { rank: 34069, score: 489 }, 2024: { rank: 31044, score: 513 } } },
+  { subject: "历史类", major: "市场营销", years: { 2024: { rank: 29622, score: 516 } } },
+  { subject: "历史类", major: "商务英语", years: { 2023: { rank: 33572, score: 490 }, 2024: { rank: 31941, score: 511 }, 2025: { rank: 28710, score: 537 } } },
+  { subject: "历史类", major: "金融学（中外合作办学）", years: { 2023: { rank: 33572, score: 490 }, 2024: { rank: 34400, score: 506 }, 2025: { rank: 31323, score: 532 } } },
+];
+
+const YEAR_WEIGHTS = { 2025: 0.55, 2024: 0.30, 2023: 0.15 };
+
+function getWeightedRank(years) {
+  let weightedSum = 0, weightTotal = 0;
+  Object.keys(years).forEach(y => {
+    const w = YEAR_WEIGHTS[y] || 0;
+    weightedSum += years[y].rank * w;
+    weightTotal += w;
+  });
+  return weightTotal > 0 ? weightedSum / weightTotal : null;
+}
+
+function calcProbability(userRank, minRank) {
+  if (!userRank || !minRank) return null;
+  const ratio = userRank / minRank;
+  const sigma = 0.12;
+  const center = 1.05;
+  const prob = 1 / (1 + Math.exp((ratio - center) / sigma));
+  return Math.round(prob * 100);
+}
+
+function getCategory(prob) {
+  if (prob >= 85) return "safety";
+  if (prob >= 50) return "match";
+  if (prob >= 15) return "reach";
+  return "none";
+}
+function getCategoryLabel(cat) {
+  return { safety: "保底", match: "稳妥", reach: "冲刺", none: "不建议" }[cat];
+}
+
+function getTrend(years) {
+  const ys = Object.keys(years).map(Number).sort();
+  if (ys.length < 2) return { type: "new", text: "新", detail: "近年初次招生" };
+  const latest = ys[ys.length - 1];
+  const prev = ys[ys.length - 2];
+  const diff = years[latest].rank - years[prev].rank;
+  const pct = (diff / years[prev].rank) * 100;
+  if (Math.abs(pct) < 3) {
+    return { type: "stable", text: "→", detail: `${prev}→${latest} 位次基本持平 (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)` };
+  } else if (diff > 0) {
+    return { type: "up", text: "↗", detail: `${prev}→${latest} 位次下降${diff}名 (变难 ${pct.toFixed(1)}%)` };
+  } else {
+    return { type: "down", text: "↘", detail: `${prev}→${latest} 位次上升${Math.abs(diff)}名 (变易 ${Math.abs(pct).toFixed(1)}%)` };
+  }
+}
+
+let currentResults = [];
+let currentFilter = "all";
+
+function doGkQuery() {
+  const subject = document.getElementById("subjectSelect").value;
+  const rank = parseInt(document.getElementById("rankInput").value);
+  if (!rank || rank < 1) {
+    alert("请输入有效的位次（正整数）");
+    document.getElementById("rankInput").focus();
+    return;
+  }
+  currentResults = admissionData
+    .filter(d => d.subject === subject)
+    .map(d => {
+      const weightedRank = getWeightedRank(d.years);
+      const probability = calcProbability(rank, weightedRank);
+      const trend = getTrend(d.years);
+      return { ...d, weightedRank: Math.round(weightedRank), probability, category: getCategory(probability), trend };
+    });
+  renderGkSummary();
+  renderGkTable();
+  document.getElementById("summary").style.display = "grid";
+  document.getElementById("filterBar").style.display = "flex";
+}
+
+function renderGkSummary() {
+  const counts = { safety: 0, match: 0, reach: 0, none: 0 };
+  currentResults.forEach(r => counts[r.category]++);
+  document.getElementById("sumTotal").textContent = currentResults.length;
+  document.getElementById("sumSafety").textContent = counts.safety;
+  document.getElementById("sumMatch").textContent = counts.match;
+  document.getElementById("sumReach").textContent = counts.reach + counts.none;
+}
+
+function sortResults(results) {
+  const sortVal = document.getElementById("sortSelect").value;
+  const sorted = [...results];
+  switch (sortVal) {
+    case "prob-desc": sorted.sort((a, b) => b.probability - a.probability); break;
+    case "prob-asc": sorted.sort((a, b) => a.probability - b.probability); break;
+    case "rank-desc": sorted.sort((a, b) => b.weightedRank - a.weightedRank); break;
+    case "rank-asc": sorted.sort((a, b) => a.weightedRank - b.weightedRank); break;
+  }
+  return sorted;
+}
+
+function renderGkTable() {
+  const container = document.getElementById("resultsTable");
+  let results = sortResults(currentResults);
+  if (currentFilter !== "all") {
+    results = results.filter(r => r.category === currentFilter);
+  }
+  if (results.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>该分类下没有匹配的专业</p></div>';
+    return;
+  }
+  const yearHeaders = [2023, 2024, 2025].map(y =>
+    `<th>${y}最低位次</th><th>${y}最低分</th>`
+  ).join("");
+  let html = `<table><thead><tr><th>专业（类）</th>${yearHeaders}<th>加权位次</th><th>趋势</th><th>录取概率</th><th>分类</th></tr></thead><tbody>`;
+  results.forEach(r => {
+    const yearCells = [2023, 2024, 2025].map(y => {
+      if (r.years[y]) {
+        return `<td>${r.years[y].rank.toLocaleString()}</td><td>${r.years[y].score}</td>`;
+      }
+      return `<td style="color:rgba(255,255,255,0.2);">—</td><td style="color:rgba(255,255,255,0.2);">—</td>`;
+    }).join("");
+    html += `<tr>
+      <td class="major-name">${r.major}</td>
+      ${yearCells}
+      <td><b>${r.weightedRank.toLocaleString()}</b></td>
+      <td><span class="trend ${r.trend.type}" title="${r.trend.detail}">${r.trend.text}</span></td>
+      <td><div class="prob-cell"><div class="prob-bar-wrap"><div class="prob-bar ${r.category}" style="width:${r.probability}%"></div></div><span class="prob-value">${r.probability}%</span></div></td>
+      <td><span class="badge badge-${r.category}">${getCategoryLabel(r.category)}</span></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// Events
+document.getElementById("queryBtn").addEventListener("click", doGkQuery);
+document.getElementById("rankInput").addEventListener("keydown", e => { if (e.key === "Enter") doGkQuery(); });
+document.getElementById("scoreInput").addEventListener("keydown", e => { if (e.key === "Enter") doGkQuery(); });
+document.querySelectorAll("#panel-gaokao .tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll("#panel-gaokao .tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentFilter = tab.dataset.filter;
+    renderGkTable();
+  });
+});
+document.getElementById("sortSelect").addEventListener("change", renderGkTable);
+</script>
+</body>
+</html>
