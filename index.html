@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>志愿录取概率查询系统</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --yellow: #ca8a04;
+    --yellow-bg: #fef9c3;
+    --red: #dc2626;
+    --red-bg: #fee2e2;
+    --gray: #6b7280;
+    --gray-bg: #f3f4f6;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --text-light: #6b7280;
+    --bg: #f8fafc;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ===== Header ===== */
+  header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: #fff;
+    padding: 28px 20px 24px;
+    text-align: center;
+  }
+  header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  header p { font-size: 14px; opacity: 0.85; }
+  header .data-info {
+    margin-top: 10px;
+    font-size: 12px;
+    background: rgba(255,255,255,0.15);
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+  }
+
+  /* ===== Container ===== */
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+  /* ===== Input Panel ===== */
+  .input-panel {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .input-panel h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .input-panel h2::before {
+    content: "";
+    width: 4px;
+    height: 18px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+  .input-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+  }
+  .form-group { flex: 1; min-width: 160px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .form-group label .required { color: var(--red); }
+  .form-group select,
+  .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fff;
+  }
+  .form-group select:focus,
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+  .form-group .hint { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+
+  .form-group-primary {
+    flex: 1.4;
+    min-width: 220px;
+    position: relative;
+  }
+  .form-group-primary::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #2563eb, #60a5fa);
+    border-radius: 12px;
+    z-index: 0;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+  .form-group-primary .inner {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(145deg, #fef3c7, #fde68a);
+    border-radius: 10px;
+    padding: 8px 12px;
+    border: 2px solid #f59e0b;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+  }
+  .form-group-primary label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .form-group-primary label::before {
+    content: "🏆";
+    font-size: 18px;
+  }
+  .form-group-primary input {
+    font-size: 22px;
+    font-weight: 700;
+    color: #b45309;
+    text-align: center;
+    padding: 12px 16px;
+    border: 2px dashed #f59e0b;
+    border-radius: 8px;
+    background: #fff;
+    transition: all 0.3s;
+    letter-spacing: 2px;
+  }
+  .form-group-primary input:focus {
+    border-color: #d97706;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.2);
+    transform: scale(1.02);
+  }
+  .form-group-primary input::placeholder {
+    color: #d97706;
+    opacity: 0.5;
+    font-weight: 400;
+  }
+  .form-group-primary .hint {
+    font-size: 12px;
+    color: #b45309;
+    font-weight: 500;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .btn-query {
+    padding: 10px 32px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+    height: 42px;
+  }
+  .btn-query:hover { background: #1d4ed8; }
+  .btn-query:active { transform: scale(0.98); }
+
+  /* ===== Summary Cards ===== */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .summary-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border-top: 3px solid var(--border);
+  }
+  .summary-card.safety { border-top-color: var(--green); }
+  .summary-card.match { border-top-color: var(--yellow); }
+  .summary-card.reach { border-top-color: var(--red); }
+  .summary-card.total { border-top-color: var(--primary); }
+  .summary-card .num { font-size: 28px; font-weight: 700; }
+  .summary-card.safety .num { color: var(--green); }
+  .summary-card.match .num { color: var(--yellow); }
+  .summary-card.reach .num { color: var(--red); }
+  .summary-card.total .num { color: var(--primary); }
+  .summary-card .label { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+
+  /* ===== Filter Bar ===== */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .filter-bar .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tab {
+    padding: 7px 18px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+  .filter-bar .sort-group {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-light);
+  }
+  .filter-bar select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+  }
+
+  /* ===== Results Table ===== */
+  .results-table {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--gray-bg);
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f9fafb; }
+  .major-name { font-weight: 500; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-safety { background: var(--green-bg); color: var(--green); }
+  .badge-match { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-reach { background: var(--red-bg); color: var(--red); }
+  .badge-none { background: var(--gray-bg); color: var(--gray); }
+
+  .prob-cell { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+  .prob-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: var(--gray-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 60px;
+  }
+  .prob-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .prob-bar.safety { background: var(--green); }
+  .prob-bar.match { background: var(--yellow); }
+  .prob-bar.reach { background: var(--red); }
+  .prob-bar.none { background: var(--gray); }
+  .prob-value { font-weight: 600; min-width: 36px; text-align: right; font-size: 13px; }
+
+  .trend { font-size: 12px; font-weight: 600; }
+  .trend.up { color: var(--red); }      /* 位次上升 = 更难录 = 不利 */
+  .trend.down { color: var(--green); }  /* 位次下降 = 更易录 = 有利 */
+  .trend.stable { color: var(--text-light); }
+  .trend.new { color: var(--primary); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-light);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 15px; }
+
+  /* ===== Algorithm Info ===== */
+  .algo-info {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.8;
+  }
+  .algo-info h3 {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .algo-info ul { padding-left: 20px; }
+  .algo-info li { margin-bottom: 4px; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .input-row { flex-direction: column; }
+    .form-group { width: 100%; }
+    .filter-bar { flex-direction: column; align-items: flex-start; }
+    .filter-bar .sort-group { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>志愿录取概率查询系统</h1>
+  <p>基于多年录取位次数据，科学评估各专业录取概率</p>
+  <span class="data-info" id="dataInfo">数据加载中...</span>
+</header>
+
+<div class="container">
+
+  <!-- ===== Input Panel ===== -->
+  <div class="input-panel">
+    <h2>查询条件</h2>
+    <div class="input-row">
+      <div class="form-group">
+        <label>科类 <span class="required">*</span></label>
+        <select id="subjectSelect">
+          <option value="物理类">物理类</option>
+          <option value="历史类">历史类</option>
+        </select>
+      </div>
+      <div class="form-group-primary">
+        <div class="inner">
+          <label>你的位次（省排名）<span class="required">*</span></label>
+          <input type="number" id="rankInput" placeholder="如：65000" min="1">
+          <div class="hint">位次比分数更稳定，推荐使用位次查询</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>你的分数（可选）</label>
+        <input type="number" id="scoreInput" placeholder="如：560" min="0">
+        <div class="hint">仅作参考，概率计算以位次为准</div>
+      </div>
+      <button class="btn-query" id="queryBtn">查询概率</button>
+    </div>
+  </div>
+
+  <!-- ===== Summary Cards ===== -->
+  <div class="summary" id="summary" style="display:none;">
+    <div class="summary-card total">
+      <div class="num" id="sumTotal">0</div>
+      <div class="label">可报考专业总数</div>
+    </div>
+    <div class="summary-card safety">
+      <div class="num" id="sumSafety">0</div>
+      <div class="label">保底（≥85%）</div>
+    </div>
+    <div class="summary-card match">
+      <div class="num" id="sumMatch">0</div>
+      <div class="label">稳妥（50%~85%）</div>
+    </div>
+    <div class="summary-card reach">
+      <div class="num" id="sumReach">0</div>
+      <div class="label">冲刺（15%~50%）</div>
+    </div>
+  </div>
+
+  <!-- ===== Filter Bar ===== -->
+  <div class="filter-bar" id="filterBar" style="display:none;">
+    <div class="tabs">
+      <div class="tab active" data-filter="all">全部</div>
+      <div class="tab" data-filter="safety">保底</div>
+      <div class="tab" data-filter="match">稳妥</div>
+      <div class="tab" data-filter="reach">冲刺</div>
+      <div class="tab" data-filter="none">不建议</div>
+    </div>
+    <div class="sort-group">
+      <span>排序：</span>
+      <select id="sortSelect">
+        <option value="prob-desc">概率从高到低</option>
+        <option value="prob-asc">概率从低到高</option>
+        <option value="rank-desc">位次从高到低</option>
+        <option value="rank-asc">位次从低到高</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ===== Results Table ===== -->
+  <div class="results-table" id="resultsTable">
+    <div class="empty-state">
+      <div class="icon">📊</div>
+      <p>请选择科类并输入位次，然后点击「查询概率」</p>
+    </div>
+  </div>
+
+  <!-- ===== Algorithm Info ===== -->
+  <div class="algo-info">
+    <h3>算法说明</h3>
+    <ul>
+      <li><b>核心方法</b>：位次法 — 以考生省排名与专业最低录取位次的比值为基础，通过 sigmoid 函数计算录取概率。</li>
+      <li><b>多年加权</b>：当存在多年数据时，按年份加权（2025年权重0.55，2024年权重0.30，2023年权重0.15），近期数据权重更高，更贴近最新招生情况。</li>
+      <li><b>概率分级</b>：≥85% 为保底，50%~85% 为稳妥，15%~50% 为冲刺，&lt;15% 为不建议。</li>
+      <li><b>计算公式</b>：P = 1 / (1 + e^((r - 1.05) / 0.12))，其中 r = 考生位次 / 加权最低位次。r &lt; 1 表示位次优于录取线。</li>
+      <li><b>趋势标记</b>：↗ 红色表示该专业录取位次上升（变难），↘ 绿色表示位次下降（变易），新增专业标"新"。</li>
+      <li><b>数据说明</b>：录取概率仅供参考，实际录取受招生计划、报考人数、试题难度等因素影响，请结合官方发布信息综合判断。</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+// ===== 录取数据（来源：2023年河北录取情况统计 + code_20260703.csv 2025 + code_20260703(1).csv 2024） =====
+// 结构：{ subject, major, years: { 2023: {rank, score}, 2024: {rank, score}, 2025: {rank, score} } }
+const admissionData = [
+  // ===== 物理类 =====
+  { subject: "物理类", major: "法学", years: { 2023: { rank: 56064, score: 541 }, 2024: { rank: 57150, score: 549 }, 2025: { rank: 63946, score: 563 } } },
+  { subject: "物理类", major: "会计学（CPA）", years: { 2024: { rank: 63909, score: 543 }, 2025: { rank: 63946, score: 563 } } },
+  { subject: "物理类", major: "知识产权", years: { 2023: { rank: 68584, score: 528 }, 2024: { rank: 70986, score: 537 }, 2025: { rank: 63946, score: 563 } } },
+  { subject: "物理类", major: "会计学（ACCA）", years: { 2024: { rank: 66174, score: 541 }, 2025: { rank: 66470, score: 561 } } },
+  { subject: "物理类", major: "会计学", years: { 2023: { rank: 68584, score: 528 }, 2024: { rank: 66174, score: 541 }, 2025: { rank: 67726, score: 560 } } },
+  { subject: "物理类", major: "财务管理", years: { 2023: { rank: 71670, score: 525 }, 2024: { rank: 69761, score: 538 }, 2025: { rank: 70324, score: 558 } } },
+  { subject: "物理类", major: "审计学", years: { 2023: { rank: 69642, score: 527 }, 2024: { rank: 70986, score: 537 }, 2025: { rank: 74291, score: 555 } } },
+  { subject: "物理类", major: "财政学", years: { 2023: { rank: 66510, score: 530 }, 2024: { rank: 74627, score: 534 }, 2025: { rank: 81112, score: 550 } } },
+  { subject: "物理类", major: "计算机科学与技术", years: { 2023: { rank: 75935, score: 521 }, 2024: { rank: 78429, score: 531 }, 2025: { rank: 81112, score: 550 } } },
+  { subject: "物理类", major: "金融学", years: { 2023: { rank: 66510, score: 530 }, 2024: { rank: 75867, score: 533 }, 2025: { rank: 83898, score: 548 } } },
+  { subject: "物理类", major: "数据科学与大数据技术", years: { 2023: { rank: 79198, score: 518 }, 2024: { rank: 82247, score: 528 }, 2025: { rank: 83898, score: 548 } } },
+  { subject: "物理类", major: "税收学", years: { 2023: { rank: 72721, score: 524 }, 2024: { rank: 79669, score: 530 }, 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "经济学", years: { 2023: { rank: 78078, score: 519 }, 2024: { rank: 82247, score: 528 }, 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "信息安全", years: { 2023: { rank: 80365, score: 517 }, 2024: { rank: 83566, score: 527 }, 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "大数据管理与应用", years: { 2025: { rank: 88117, score: 545 } } },
+  { subject: "物理类", major: "物联网工程", years: { 2024: { rank: 86309, score: 525 }, 2025: { rank: 91027, score: 543 } } },
+  { subject: "物理类", major: "经济统计学", years: { 2023: { rank: 81468, score: 516 }, 2024: { rank: 87643, score: 524 }, 2025: { rank: 95459, score: 540 } } },
+  { subject: "物理类", major: "智能科学与技术", years: { 2023: { rank: 86019, score: 512 }, 2024: { rank: 90382, score: 522 }, 2025: { rank: 95459, score: 540 } } },
+  { subject: "物理类", major: "人工智能", years: { 2023: { rank: 90687, score: 508 }, 2024: { rank: 94287, score: 519 }, 2025: { rank: 98476, score: 538 } } },
+  { subject: "物理类", major: "英语", years: { 2023: { rank: 78078, score: 519 }, 2024: { rank: 84920, score: 526 }, 2025: { rank: 99987, score: 537 } } },
+  { subject: "物理类", major: "数据计算及应用", years: { 2023: { rank: 82588, score: 515 }, 2024: { rank: 90382, score: 522 }, 2025: { rank: 99987, score: 537 } } },
+  { subject: "物理类", major: "应用统计学", years: { 2023: { rank: 88306, score: 510 }, 2024: { rank: 95680, score: 518 }, 2025: { rank: 101526, score: 536 } } },
+  { subject: "物理类", major: "商务英语", years: { 2023: { rank: 89507, score: 509 }, 2024: { rank: 95680, score: 518 }, 2025: { rank: 104591, score: 534 } } },
+  { subject: "物理类", major: "区块链工程", years: { 2023: { rank: 91868, score: 507 }, 2024: { rank: 99972, score: 515 }, 2025: { rank: 106095, score: 533 } } },
+  { subject: "物理类", major: "国际经济与贸易", years: { 2023: { rank: 87137, score: 511 }, 2024: { rank: 97045, score: 517 }, 2025: { rank: 107712, score: 532 } } },
+  { subject: "物理类", major: "会计学（中外合作办学）", years: { 2023: { rank: 91868, score: 507 }, 2024: { rank: 98499, score: 516 }, 2025: { rank: 107712, score: 532 } } },
+  { subject: "物理类", major: "工商管理", years: { 2023: { rank: 89507, score: 509 }, 2024: { rank: 101439, score: 514 }, 2025: { rank: 107712, score: 532 } } },
+  { subject: "物理类", major: "金融数学", years: { 2023: { rank: 82588, score: 515 }, 2024: { rank: 98499, score: 516 }, 2025: { rank: 109287, score: 531 } } },
+  { subject: "物理类", major: "金融工程", years: { 2023: { rank: 90687, score: 508 }, 2024: { rank: 101439, score: 514 }, 2025: { rank: 109287, score: 531 } } },
+  { subject: "物理类", major: "数字经济", years: { 2023: { rank: 87137, score: 511 }, 2024: { rank: 101439, score: 514 }, 2025: { rank: 112447, score: 529 } } },
+  { subject: "物理类", major: "工商管理（数智化管理创新班）", years: { 2025: { rank: 114051, score: 528 } } },
+  { subject: "物理类", major: "电子商务", years: { 2023: { rank: 91868, score: 507 }, 2024: { rank: 102928, score: 513 }, 2025: { rank: 115590, score: 527 } } },
+  { subject: "物理类", major: "精算学", years: { 2023: { rank: 100365, score: 500 }, 2024: { rank: 107334, score: 510 }, 2025: { rank: 115590, score: 527 } } },
+  { subject: "物理类", major: "供应链管理", years: { 2023: { rank: 97924, score: 502 }, 2024: { rank: 104398, score: 512 }, 2025: { rank: 117158, score: 526 } } },
+  { subject: "物理类", major: "财务管理（中外合作办学）", years: { 2023: { rank: 99166, score: 501 }, 2024: { rank: 108861, score: 509 }, 2025: { rank: 117158, score: 526 } } },
+  { subject: "物理类", major: "人力资源管理", years: { 2024: { rank: 108861, score: 509 }, 2025: { rank: 118812, score: 525 } } },
+  { subject: "物理类", major: "信用管理", years: { 2023: { rank: 95445, score: 504 }, 2024: { rank: 108861, score: 509 }, 2025: { rank: 118812, score: 525 } } },
+  { subject: "物理类", major: "保险学", years: { 2023: { rank: 96663, score: 503 }, 2024: { rank: 111884, score: 507 }, 2025: { rank: 120435, score: 524 } } },
+  { subject: "物理类", major: "投资学", years: { 2023: { rank: 89507, score: 509 }, 2024: { rank: 108861, score: 509 }, 2025: { rank: 122069, score: 523 } } },
+  { subject: "物理类", major: "金融科技", years: { 2023: { rank: 122119, score: 483 }, 2024: { rank: 114901, score: 505 }, 2025: { rank: 122069, score: 523 } } },
+  { subject: "物理类", major: "金融学（中外合作办学）", years: { 2023: { rank: 106586, score: 495 }, 2024: { rank: 125913, score: 498 }, 2025: { rank: 131912, score: 517 } } },
+  { subject: "物理类", major: "翻译", years: { 2023: { rank: 86019, score: 512 }, 2024: { rank: 101439, score: 514 } } },
+  { subject: "物理类", major: "市场营销", years: { 2024: { rank: 110329, score: 508 } } },
+
+  // ===== 历史类 =====
+  { subject: "历史类", major: "会计学（CPA）", years: { 2024: { rank: 15144, score: 553 }, 2025: { rank: 12935, score: 575 } } },
+  { subject: "历史类", major: "会计学（ACCA）", years: { 2024: { rank: 15800, score: 551 }, 2025: { rank: 13600, score: 573 } } },
+  { subject: "历史类", major: "会计学", years: { 2023: { rank: 18868, score: 524 }, 2024: { rank: 16776, score: 548 }, 2025: { rank: 14639, score: 570 } } },
+  { subject: "历史类", major: "法学", years: { 2023: { rank: 19596, score: 522 }, 2024: { rank: 18119, score: 544 }, 2025: { rank: 17629, score: 562 } } },
+  { subject: "历史类", major: "审计学", years: { 2023: { rank: 20750, score: 519 }, 2024: { rank: 18458, score: 543 }, 2025: { rank: 16810, score: 564 } } },
+  { subject: "历史类", major: "金融学", years: { 2023: { rank: 20750, score: 519 }, 2024: { rank: 18794, score: 542 }, 2025: { rank: 18388, score: 560 } } },
+  { subject: "历史类", major: "财政学", years: { 2023: { rank: 20329, score: 520 }, 2024: { rank: 19536, score: 540 }, 2025: { rank: 19202, score: 558 } } },
+  { subject: "历史类", major: "财务管理", years: { 2023: { rank: 22642, score: 514 }, 2024: { rank: 19926, score: 539 }, 2025: { rank: 17998, score: 561 } } },
+  { subject: "历史类", major: "知识产权", years: { 2023: { rank: 21136, score: 518 }, 2024: { rank: 21033, score: 536 }, 2025: { rank: 20836, score: 554 } } },
+  { subject: "历史类", major: "税收学", years: { 2023: { rank: 21888, score: 516 }, 2024: { rank: 21033, score: 536 }, 2025: { rank: 19979, score: 556 } } },
+  { subject: "历史类", major: "经济学", years: { 2023: { rank: 23072, score: 513 }, 2024: { rank: 21854, score: 534 }, 2025: { rank: 20836, score: 554 } } },
+  { subject: "历史类", major: "经济统计学", years: { 2023: { rank: 24350, score: 510 } } },
+  { subject: "历史类", major: "国际经济与贸易", years: { 2023: { rank: 25626, score: 507 }, 2024: { rank: 24676, score: 527 }, 2025: { rank: 23983, score: 547 } } },
+  { subject: "历史类", major: "金融数学", years: { 2023: { rank: 26504, score: 505 } } },
+  { subject: "历史类", major: "保险学", years: { 2023: { rank: 28755, score: 500 }, 2024: { rank: 25522, score: 525 }, 2025: { rank: 20836, score: 554 } } },
+  { subject: "历史类", major: "会计学（中外合作办学）", years: { 2023: { rank: 26951, score: 504 }, 2024: { rank: 25988, score: 524 }, 2025: { rank: 23983, score: 547 } } },
+  { subject: "历史类", major: "投资学", years: { 2023: { rank: 27841, score: 502 }, 2024: { rank: 25988, score: 524 }, 2025: { rank: 23511, score: 548 } } },
+  { subject: "历史类", major: "电子商务", years: { 2023: { rank: 26951, score: 504 }, 2024: { rank: 26429, score: 523 }, 2025: { rank: 24943, score: 545 } } },
+  { subject: "历史类", major: "信用管理", years: { 2023: { rank: 27841, score: 502 }, 2024: { rank: 26898, score: 522 }, 2025: { rank: 24943, score: 545 } } },
+  { subject: "历史类", major: "供应链管理", years: { 2023: { rank: 29683, score: 498 }, 2024: { rank: 27324, score: 521 }, 2025: { rank: 25427, score: 544 } } },
+  { subject: "历史类", major: "工商管理", years: { 2023: { rank: 30136, score: 497 }, 2024: { rank: 27790, score: 520 }, 2025: { rank: 22582, score: 550 } } },
+  { subject: "历史类", major: "工商管理（数智化管理创新班）", years: { 2025: { rank: 22582, score: 550 } } },
+  { subject: "历史类", major: "英语", years: { 2023: { rank: 28305, score: 501 }, 2024: { rank: 28258, score: 519 }, 2025: { rank: 27280, score: 540 } } },
+  { subject: "历史类", major: "人力资源管理", years: { 2024: { rank: 28258, score: 519 }, 2025: { rank: 26359, score: 542 } } },
+  { subject: "历史类", major: "财务管理（中外合作办学）", years: { 2023: { rank: 30136, score: 497 }, 2024: { rank: 29179, score: 517 }, 2025: { rank: 28223, score: 538 } } },
+  { subject: "历史类", major: "翻译", years: { 2023: { rank: 34069, score: 489 }, 2024: { rank: 31044, score: 513 } } },
+  { subject: "历史类", major: "市场营销", years: { 2024: { rank: 29622, score: 516 } } },
+  { subject: "历史类", major: "商务英语", years: { 2023: { rank: 33572, score: 490 }, 2024: { rank: 31941, score: 511 }, 2025: { rank: 28710, score: 537 } } },
+  { subject: "历史类", major: "金融学（中外合作办学）", years: { 2023: { rank: 33572, score: 490 }, 2024: { rank: 34400, score: 506 }, 2025: { rank: 31323, score: 532 } } },
+];
+
+// ===== 年份权重配置（近期权重更高） =====
+const YEAR_WEIGHTS = { 2025: 0.55, 2024: 0.30, 2023: 0.15 };
+
+// ===== 计算加权最低位次 =====
+function getWeightedRank(years) {
+  let weightedSum = 0;
+  let weightTotal = 0;
+  Object.keys(years).forEach(y => {
+    const w = YEAR_WEIGHTS[y] || 0;
+    weightedSum += years[y].rank * w;
+    weightTotal += w;
+  });
+  return weightTotal > 0 ? weightedSum / weightTotal : null;
+}
+
+// ===== 概率计算（位次法 + sigmoid） =====
+function calcProbability(userRank, minRank) {
+  if (!userRank || !minRank) return null;
+  const ratio = userRank / minRank;
+  const sigma = 0.12;
+  const center = 1.05;
+  const prob = 1 / (1 + Math.exp((ratio - center) / sigma));
+  return Math.round(prob * 100);
+}
+
+// ===== 概率分级 =====
+function getCategory(prob) {
+  if (prob >= 85) return "safety";
+  if (prob >= 50) return "match";
+  if (prob >= 15) return "reach";
+  return "none";
+}
+function getCategoryLabel(cat) {
+  return { safety: "保底", match: "稳妥", reach: "冲刺", none: "不建议" }[cat];
+}
+
+// ===== 趋势分析（位次变化） =====
+function getTrend(years) {
+  const ys = Object.keys(years).map(Number).sort();
+  if (ys.length < 2) return { type: "new", text: "新", detail: "近年初次招生" };
+  const latest = ys[ys.length - 1];
+  const prev = ys[ys.length - 2];
+  const diff = years[latest].rank - years[prev].rank;
+  const pct = (diff / years[prev].rank) * 100;
+  if (Math.abs(pct) < 3) {
+    return { type: "stable", text: "→", detail: `${prev}→${latest} 位次基本持平 (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)` };
+  } else if (diff > 0) {
+    // 位次数值变大 = 排名变后 = 录取变难
+    return { type: "up", text: "↗", detail: `${prev}→${latest} 位次下降${diff}名 (变难 ${pct.toFixed(1)}%)` };
+  } else {
+    return { type: "down", text: "↘", detail: `${prev}→${latest} 位次上升${Math.abs(diff)}名 (变易 ${Math.abs(pct).toFixed(1)}%)` };
+  }
+}
+
+// ===== 状态 =====
+let currentResults = [];
+let currentFilter = "all";
+
+// ===== 初始化数据信息 =====
+(function init() {
+  const allYears = new Set();
+  admissionData.forEach(d => Object.keys(d.years).forEach(y => allYears.add(y)));
+  const years = [...allYears].sort();
+  const subjects = [...new Set(admissionData.map(d => d.subject))];
+  document.getElementById("dataInfo").textContent =
+    `数据范围：${years.join("、")}年 | ${subjects.join("、")} | 共 ${admissionData.length} 个专业`;
+})();
+
+// ===== 查询 =====
+function doQuery() {
+  const subject = document.getElementById("subjectSelect").value;
+  const rank = parseInt(document.getElementById("rankInput").value);
+
+  if (!rank || rank < 1) {
+    alert("请输入有效的位次（正整数）");
+    document.getElementById("rankInput").focus();
+    return;
+  }
+
+  currentResults = admissionData
+    .filter(d => d.subject === subject)
+    .map(d => {
+      const weightedRank = getWeightedRank(d.years);
+      const probability = calcProbability(rank, weightedRank);
+      const trend = getTrend(d.years);
+      return {
+        ...d,
+        weightedRank: Math.round(weightedRank),
+        probability,
+        category: getCategory(probability),
+        trend,
+      };
+    });
+
+  renderSummary();
+  renderTable();
+  document.getElementById("summary").style.display = "grid";
+  document.getElementById("filterBar").style.display = "flex";
+}
+
+// ===== 渲染摘要 =====
+function renderSummary() {
+  const counts = { safety: 0, match: 0, reach: 0, none: 0 };
+  currentResults.forEach(r => counts[r.category]++);
+  document.getElementById("sumTotal").textContent = currentResults.length;
+  document.getElementById("sumSafety").textContent = counts.safety;
+  document.getElementById("sumMatch").textContent = counts.match;
+  document.getElementById("sumReach").textContent = counts.reach + counts.none;
+}
+
+// ===== 排序 =====
+function sortResults(results) {
+  const sortVal = document.getElementById("sortSelect").value;
+  const sorted = [...results];
+  switch (sortVal) {
+    case "prob-desc": sorted.sort((a, b) => b.probability - a.probability); break;
+    case "prob-asc":  sorted.sort((a, b) => a.probability - b.probability); break;
+    case "rank-desc": sorted.sort((a, b) => b.weightedRank - a.weightedRank); break;
+    case "rank-asc":  sorted.sort((a, b) => a.weightedRank - b.weightedRank); break;
+  }
+  return sorted;
+}
+
+// ===== 渲染表格 =====
+function renderTable() {
+  const container = document.getElementById("resultsTable");
+  let results = sortResults(currentResults);
+
+  if (currentFilter !== "all") {
+    results = results.filter(r => r.category === currentFilter);
+  }
+
+  if (results.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>该分类下没有匹配的专业</p>
+      </div>`;
+    return;
+  }
+
+  // 动态生成表头（按可用年份）
+  const yearHeaders = [2023, 2024, 2025].map(y =>
+    `<th>${y}最低位次</th><th>${y}最低分</th>`
+  ).join("");
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>专业（类）</th>
+          ${yearHeaders}
+          <th>加权位次</th>
+          <th>趋势</th>
+          <th>录取概率</th>
+          <th>分类</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  results.forEach(r => {
+    // 各年份单元格
+    const yearCells = [2023, 2024, 2025].map(y => {
+      if (r.years[y]) {
+        return `<td>${r.years[y].rank.toLocaleString()}</td><td>${r.years[y].score}</td>`;
+      }
+      return `<td style="color:#cbd5e1">—</td><td style="color:#cbd5e1">—</td>`;
+    }).join("");
+
+    html += `
+      <tr>
+        <td class="major-name">${r.major}</td>
+        ${yearCells}
+        <td><b>${r.weightedRank.toLocaleString()}</b></td>
+        <td><span class="trend ${r.trend.type}" title="${r.trend.detail}">${r.trend.text}</span></td>
+        <td>
+          <div class="prob-cell">
+            <div class="prob-bar-wrap">
+              <div class="prob-bar ${r.category}" style="width:${r.probability}%"></div>
+            </div>
+            <span class="prob-value">${r.probability}%</span>
+          </div>
+        </td>
+        <td><span class="badge badge-${r.category}">${getCategoryLabel(r.category)}</span></td>
+      </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// ===== 事件绑定 =====
+document.getElementById("queryBtn").addEventListener("click", doQuery);
+document.getElementById("rankInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") doQuery();
+});
+document.getElementById("scoreInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") doQuery();
+});
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentFilter = tab.dataset.filter;
+    renderTable();
+  });
+});
+
+document.getElementById("sortSelect").addEventListener("change", renderTable);
+</script>
+
+</body>
+</html>
+
